@@ -9,7 +9,6 @@ import { TextConversationInput, ConversationState } from "@/components/practice/
 import { InteractiveMicControl, SpeechPracticeState } from "@/components/practice/InteractiveMicControl";
 import { conversationService, ConversationSessionDto } from "@/services/conversationService";
 import { useAuth } from "@/context/AuthContext";
-import { mockTopics } from "@/lib/mock";
 import { ConversationMessage } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";

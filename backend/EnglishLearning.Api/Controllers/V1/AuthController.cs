@@ -4,11 +4,13 @@ using EnglishLearning.Application.Interfaces.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EnglishLearning.Api.Controllers.V1;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[EnableRateLimiting("AuthRateLimit")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;

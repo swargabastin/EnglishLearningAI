@@ -67,8 +67,18 @@ builder.Services.AddScoped<IAdaptiveLearningService, AdaptiveLearningService>();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
 // Configure JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] 
-                ?? "EnglishLearningAI_DevelopmentSecretKey_MustBeAtLeast32BytesLong_2026!";
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Testing")
+    {
+        jwtSecret = "EnglishLearningAI_DevelopmentSecretKey_MustBeAtLeast32BytesLong_2026!";
+    }
+    else
+    {
+        throw new InvalidOperationException("Fatal configuration error: 'Jwt:Secret' must be provided in non-development environments.");
+    }
+}
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "EnglishLearningAI";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "EnglishLearningClient";
 
@@ -96,10 +106,22 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Configure Rate Limiting for Auth protection (10 requests per minute per IP for auth endpoints)
+// Configure Rate Limiting: Dedicated Auth protection (10 req/min) + General Global limiter (60 req/min)
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("AuthRateLimit", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 10,
+                QueueLimit = 0,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",

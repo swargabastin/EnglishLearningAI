@@ -9,19 +9,30 @@ import { GoalSelector } from "@/components/profile/GoalSelector";
 import { AudioPreferencesCard } from "@/components/profile/AudioPreferencesCard";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { mockUser as initialUser } from "@/lib/mock";
+import { Loader2 } from "lucide-react";
 import { CEFRLevel, LearningGoal, UserProfile } from "@/types";
 
 export default function ProfilePage() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
-  const [user, setUser] = useState<UserProfile>(authUser || initialUser);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
     }
   }, [authUser]);
+
+  if (authLoading || !user) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+          <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+          <p className="text-sm text-slate-400">Loading your profile...</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleUpdateProfile = (name: string, email: string) => {
     setUser((prev) => ({ ...prev, name, email }));

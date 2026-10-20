@@ -7,7 +7,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { progressService, DashboardResponseDto } from "@/services/progressService";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { mockUser } from "@/lib/mock";
 import {
   Mic,
   MessageSquare,
@@ -17,12 +16,9 @@ import {
   FileText,
   Sparkles,
   Flame,
-  Clock,
   ArrowRight,
   Loader2,
   Bot,
-  CheckCircle2,
-  Calendar,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -31,9 +27,8 @@ import { DocumentUploadModal } from "@/components/document/DocumentUploadModal";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { t, language } = useLanguage();
-  const user = authUser || mockUser;
 
   const [dashboardData, setDashboardData] = useState<DashboardResponseDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -69,7 +64,36 @@ export default function DashboardPage() {
   const stats = dashboardData?.stats;
   const recentSessions = dashboardData?.recentSessions || [];
 
-  const todayMinutes = user.todayPracticeMinutes ?? (stats?.totalPracticeMinutes ? Math.min(stats.totalPracticeMinutes, 15) : 12);
+  if (isAuthLoading || isLoading) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+          <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+          <p className="text-sm text-slate-400">Loading your learning dashboard...</p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const user = authUser || {
+    id: "guest",
+    name: "Learner",
+    email: "learner@fluentai.app",
+    level: "B1" as const,
+    learningGoal: "Speaking Fluency" as const,
+    dailyPracticeTargetMinutes: 15,
+    todayPracticeMinutes: stats?.totalPracticeMinutes ? Math.min(stats.totalPracticeMinutes, 15) : 0,
+    streakDays: stats?.streakDays ?? 0,
+    createdAt: new Date().toISOString(),
+    preferences: {
+      tutorVoice: "alloy" as const,
+      playbackSpeed: 1.0,
+      autoPlayAudio: true,
+      showLiveTranscript: true,
+    },
+  };
+
+  const todayMinutes = user.todayPracticeMinutes ?? (stats?.totalPracticeMinutes ? Math.min(stats.totalPracticeMinutes, 15) : 0);
   const targetMinutes = user.dailyPracticeTargetMinutes ?? 15;
   const progressPercent = Math.min(100, Math.round((todayMinutes / targetMinutes) * 100));
 

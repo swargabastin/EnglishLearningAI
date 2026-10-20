@@ -14,6 +14,18 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "FluentAI — Spoken English Practice with AI Coach Emma",
   description: "Accelerate your English speaking fluency with personalized real-time AI conversation and assessment.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-192.svg",
+    apple: "/icon-192.svg",
+  },
+};
+
+export const viewport = {
+  themeColor: "#7c3aed",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

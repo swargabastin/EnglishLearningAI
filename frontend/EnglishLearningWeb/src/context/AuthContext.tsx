@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
+import { progressService } from "@/services/progressService";
 import {
   AuthUserDto,
   CEFRLevel,
@@ -33,8 +34,8 @@ function mapDtoToUserProfile(dto: AuthUserDto): UserProfile {
     level: (dto.englishLevel as CEFRLevel) || "B1",
     learningGoal: (dto.learningGoal as LearningGoal) || "Speaking Fluency",
     dailyPracticeTargetMinutes: 15,
-    todayPracticeMinutes: 12,
-    streakDays: 4,
+    todayPracticeMinutes: 0,
+    streakDays: 0,
     avatarUrl: undefined,
     createdAt: dto.createdAt,
     preferences: {
@@ -69,7 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(savedToken);
     try {
       const userDto = await authService.getMe();
-      setUser(mapDtoToUserProfile(userDto));
+      const profile = mapDtoToUserProfile(userDto);
+      try {
+        const dashboard = await progressService.getDashboard();
+        if (dashboard?.stats) {
+          profile.todayPracticeMinutes = Math.min(
+            dashboard.stats.totalPracticeMinutes || 0,
+            profile.dailyPracticeTargetMinutes
+          );
+        }
+      } catch {
+        // Fallback to initial 0 metrics if dashboard stats not yet populated
+      }
+      setUser(profile);
     } catch {
       localStorage.removeItem("el_access_token");
       setUser(null);
