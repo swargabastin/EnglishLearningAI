@@ -30,9 +30,12 @@ public class AdaptiveLearningService : IAdaptiveLearningService
     public async Task EnsureCurriculumSeededAsync(CancellationToken cancellationToken = default)
     {
         var existing = await _repository.GetAllActiveObjectivesAsync(cancellationToken);
-        if (existing == null || existing.Count == 0)
+        var existingCodes = (existing ?? new List<LearningObjective>()).Select(e => e.Code).ToHashSet();
+
+        bool anyAdded = false;
+        foreach (var obj in CurriculumCatalog.MasterObjectives)
         {
-            foreach (var obj in CurriculumCatalog.MasterObjectives)
+            if (!existingCodes.Contains(obj.Code))
             {
                 await _repository.AddObjectiveAsync(new LearningObjective
                 {
@@ -49,7 +52,12 @@ public class AdaptiveLearningService : IAdaptiveLearningService
                     SortOrder = obj.SortOrder,
                     IsActive = true
                 }, cancellationToken);
+                anyAdded = true;
             }
+        }
+
+        if (anyAdded)
+        {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }

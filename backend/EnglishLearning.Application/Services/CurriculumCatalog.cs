@@ -8,7 +8,9 @@ public static class CurriculumCatalog
 {
     public static readonly IReadOnlyList<LearningObjective> MasterObjectives = new List<LearningObjective>
     {
-        // Basic (A1/A2)
+        // =========================================================================
+        // BASIC (A1 / A2)
+        // =========================================================================
         new()
         {
             Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
@@ -26,11 +28,11 @@ public static class CurriculumCatalog
         },
         new()
         {
-            Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-            Code = "OBJ_B_PAST_SIMPLE",
-            Title = "Past Simple: Completed Events & Regular/Irregular Verbs",
-            Description = "Confidently narrate past experiences using regular -ed and common irregular past verbs with did/didn't.",
-            SkillCategory = SkillCategory.SentenceConstruction,
+            Id = Guid.Parse("10000000-0000-0000-0000-000000000005"),
+            Code = "OBJ_B_PRES_CONT",
+            Title = "Present Continuous: Actions in Progress & Temporary Situations",
+            Description = "Formulate immediate actions happening now and temporary arrangements using am/is/are + verb-ing.",
+            SkillCategory = SkillCategory.Grammar,
             Difficulty = LearnerCategory.Basic,
             CefrLevel = EnglishProficiencyLevel.A2,
             PrerequisiteCodesJson = "[\"OBJ_B_PRES_SIMPLE\"]",
@@ -41,9 +43,39 @@ public static class CurriculumCatalog
         },
         new()
         {
+            Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+            Code = "OBJ_B_PAST_SIMPLE",
+            Title = "Past Simple: Completed Events & Regular/Irregular Verbs",
+            Description = "Confidently narrate past experiences using regular -ed and common irregular past verbs with did/didn't.",
+            SkillCategory = SkillCategory.SentenceConstruction,
+            Difficulty = LearnerCategory.Basic,
+            CefrLevel = EnglishProficiencyLevel.A2,
+            PrerequisiteCodesJson = "[\"OBJ_B_PRES_SIMPLE\"]",
+            MasteryScoreThreshold = 75.0m,
+            SuggestedDurationMinutes = 15,
+            SortOrder = 3,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("10000000-0000-0000-0000-000000000006"),
+            Code = "OBJ_B_PAST_CONT",
+            Title = "Past Continuous: Interrupted Actions & Past Background Context",
+            Description = "Describe actions that were ongoing at a past moment or interrupted by another event using was/were + verb-ing.",
+            SkillCategory = SkillCategory.Grammar,
+            Difficulty = LearnerCategory.Basic,
+            CefrLevel = EnglishProficiencyLevel.A2,
+            PrerequisiteCodesJson = "[\"OBJ_B_PAST_SIMPLE\"]",
+            MasteryScoreThreshold = 75.0m,
+            SuggestedDurationMinutes = 15,
+            SortOrder = 4,
+            IsActive = true
+        },
+        new()
+        {
             Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
             Code = "OBJ_B_FUTURE_PLANS",
-            Title = "Future Intentions: Going To vs Will",
+            Title = "Future Simple: Intentions, Going To vs Will",
             Description = "Distinguish planned decisions (going to) from spontaneous offers and predictions (will).",
             SkillCategory = SkillCategory.Grammar,
             Difficulty = LearnerCategory.Basic,
@@ -51,7 +83,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_B_PRES_SIMPLE\"]",
             MasteryScoreThreshold = 75.0m,
             SuggestedDurationMinutes = 15,
-            SortOrder = 3,
+            SortOrder = 5,
             IsActive = true
         },
         new()
@@ -66,16 +98,18 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[]",
             MasteryScoreThreshold = 75.0m,
             SuggestedDurationMinutes = 15,
-            SortOrder = 4,
+            SortOrder = 6,
             IsActive = true
         },
 
-        // Standard (B1/B2)
+        // =========================================================================
+        // STANDARD (B1 / B2)
+        // =========================================================================
         new()
         {
             Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
             Code = "OBJ_S_PRES_PERF",
-            Title = "Present Perfect vs Past Simple",
+            Title = "Present Perfect: Experiences, Recent Accomplishments & Unfinished Time",
             Description = "Master life experiences, unfinished periods, and recent events using have/has + past participle with since, for, and already.",
             SkillCategory = SkillCategory.Grammar,
             Difficulty = LearnerCategory.Standard,
@@ -83,7 +117,67 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_B_PAST_SIMPLE\"]",
             MasteryScoreThreshold = 75.0m,
             SuggestedDurationMinutes = 20,
-            SortOrder = 5,
+            SortOrder = 7,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("20000000-0000-0000-0000-000000000005"),
+            Code = "OBJ_S_PRES_PERF_CONT",
+            Title = "Present Perfect Continuous: Ongoing Duration & Recent Activities",
+            Description = "Emphasize the duration of activities continuing up to now or with present results using have/has been + verb-ing.",
+            SkillCategory = SkillCategory.Grammar,
+            Difficulty = LearnerCategory.Standard,
+            CefrLevel = EnglishProficiencyLevel.B1,
+            PrerequisiteCodesJson = "[\"OBJ_S_PRES_PERF\"]",
+            MasteryScoreThreshold = 75.0m,
+            SuggestedDurationMinutes = 20,
+            SortOrder = 8,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("20000000-0000-0000-0000-000000000006"),
+            Code = "OBJ_S_PAST_PERF",
+            Title = "Past Perfect: Sequencing Actions Before Another Past Event",
+            Description = "Clarify chronological sequence by describing the earlier of two past actions using had + past participle.",
+            SkillCategory = SkillCategory.Grammar,
+            Difficulty = LearnerCategory.Standard,
+            CefrLevel = EnglishProficiencyLevel.B2,
+            PrerequisiteCodesJson = "[\"OBJ_B_PAST_SIMPLE\"]",
+            MasteryScoreThreshold = 80.0m,
+            SuggestedDurationMinutes = 20,
+            SortOrder = 9,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("20000000-0000-0000-0000-000000000007"),
+            Code = "OBJ_S_PAST_PERF_CONT",
+            Title = "Past Perfect Continuous: Duration Leading to a Past Milestone",
+            Description = "Describe the duration of an ongoing action that was in progress before another specific past moment using had been + verb-ing.",
+            SkillCategory = SkillCategory.SentenceConstruction,
+            Difficulty = LearnerCategory.Standard,
+            CefrLevel = EnglishProficiencyLevel.B2,
+            PrerequisiteCodesJson = "[\"OBJ_S_PAST_PERF\"]",
+            MasteryScoreThreshold = 80.0m,
+            SuggestedDurationMinutes = 20,
+            SortOrder = 10,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("20000000-0000-0000-0000-000000000008"),
+            Code = "OBJ_S_FUTURE_CONT",
+            Title = "Future Continuous: Actions in Progress at a Future Moment",
+            Description = "Express actions that will be actively ongoing at a specific future time or polite inquiries using will be + verb-ing.",
+            SkillCategory = SkillCategory.Grammar,
+            Difficulty = LearnerCategory.Standard,
+            CefrLevel = EnglishProficiencyLevel.B2,
+            PrerequisiteCodesJson = "[\"OBJ_B_FUTURE_PLANS\"]",
+            MasteryScoreThreshold = 80.0m,
+            SuggestedDurationMinutes = 20,
+            SortOrder = 11,
             IsActive = true
         },
         new()
@@ -98,7 +192,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_B_PRES_SIMPLE\"]",
             MasteryScoreThreshold = 75.0m,
             SuggestedDurationMinutes = 20,
-            SortOrder = 6,
+            SortOrder = 12,
             IsActive = true
         },
         new()
@@ -113,7 +207,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_B_FUTURE_PLANS\", \"OBJ_B_PAST_SIMPLE\"]",
             MasteryScoreThreshold = 80.0m,
             SuggestedDurationMinutes = 20,
-            SortOrder = 7,
+            SortOrder = 13,
             IsActive = true
         },
         new()
@@ -128,11 +222,43 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_S_PRES_PERF\"]",
             MasteryScoreThreshold = 80.0m,
             SuggestedDurationMinutes = 20,
-            SortOrder = 8,
+            SortOrder = 14,
             IsActive = true
         },
 
-        // Advanced (C1/C2)
+        // =========================================================================
+        // ADVANCED (C1 / C2)
+        // =========================================================================
+        new()
+        {
+            Id = Guid.Parse("30000000-0000-0000-0000-000000000005"),
+            Code = "OBJ_A_FUTURE_PERF",
+            Title = "Future Perfect: Milestones & Deadlines Completed by a Future Time",
+            Description = "Project deadlines and completed deliverables by a specified future cutoff using will have + past participle.",
+            SkillCategory = SkillCategory.Grammar,
+            Difficulty = LearnerCategory.Advanced,
+            CefrLevel = EnglishProficiencyLevel.C1,
+            PrerequisiteCodesJson = "[\"OBJ_S_FUTURE_CONT\"]",
+            MasteryScoreThreshold = 80.0m,
+            SuggestedDurationMinutes = 30,
+            SortOrder = 15,
+            IsActive = true
+        },
+        new()
+        {
+            Id = Guid.Parse("30000000-0000-0000-0000-000000000006"),
+            Code = "OBJ_A_FUTURE_PERF_CONT",
+            Title = "Future Perfect Continuous: Cumulative Duration Up to a Future Point",
+            Description = "State cumulative career milestones and long-term project duration up to a future point using will have been + verb-ing.",
+            SkillCategory = SkillCategory.SentenceConstruction,
+            Difficulty = LearnerCategory.Advanced,
+            CefrLevel = EnglishProficiencyLevel.C1,
+            PrerequisiteCodesJson = "[\"OBJ_A_FUTURE_PERF\"]",
+            MasteryScoreThreshold = 85.0m,
+            SuggestedDurationMinutes = 30,
+            SortOrder = 16,
+            IsActive = true
+        },
         new()
         {
             Id = Guid.Parse("30000000-0000-0000-0000-000000000001"),
@@ -145,7 +271,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_S_COND_FIRST_SEC\"]",
             MasteryScoreThreshold = 80.0m,
             SuggestedDurationMinutes = 30,
-            SortOrder = 9,
+            SortOrder = 17,
             IsActive = true
         },
         new()
@@ -160,7 +286,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_S_PRES_PERF\"]",
             MasteryScoreThreshold = 85.0m,
             SuggestedDurationMinutes = 30,
-            SortOrder = 10,
+            SortOrder = 18,
             IsActive = true
         },
         new()
@@ -175,7 +301,7 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_S_PROF_TRANSITIONS\"]",
             MasteryScoreThreshold = 85.0m,
             SuggestedDurationMinutes = 30,
-            SortOrder = 11,
+            SortOrder = 19,
             IsActive = true
         },
         new()
@@ -190,14 +316,14 @@ public static class CurriculumCatalog
             PrerequisiteCodesJson = "[\"OBJ_A_COND_THIRD_MIX\"]",
             MasteryScoreThreshold = 85.0m,
             SuggestedDurationMinutes = 30,
-            SortOrder = 12,
+            SortOrder = 20,
             IsActive = true
         }
     };
 
     public static readonly IReadOnlyList<AssessmentQuestionDto> DiagnosticAssessmentQuestions = new List<AssessmentQuestionDto>
     {
-        // 1. Grammar (Basic -> Advanced)
+        // 1. Grammar (Basic -> Advanced covering core tenses)
         new(
             Id: "diag_g1",
             SkillCategory: "Grammar",
@@ -209,17 +335,33 @@ public static class CurriculumCatalog
         new(
             Id: "diag_g2",
             SkillCategory: "Grammar",
-            Prompt: "Select the sentence with the correct tense usage:",
+            Prompt: "Select the sentence with the correct tense usage to describe an ongoing action:",
+            Options: new[] { "I am currently lead the product deployment team.", "I am currently leading the product deployment team.", "I currently leading the product deployment team.", "I am lead the product deployment team currently." },
+            CorrectOptionIndex: 1,
+            Difficulty: "Basic"
+        ),
+        new(
+            Id: "diag_g3",
+            SkillCategory: "Grammar",
+            Prompt: "Select the sentence with the correct tense usage for past completion vs experience:",
             Options: new[] { "I have lived in this city since three years.", "I lived in this city since three years ago.", "I have lived in this city for three years.", "I am living in this city for three years." },
             CorrectOptionIndex: 2,
             Difficulty: "Standard"
         ),
         new(
-            Id: "diag_g3",
+            Id: "diag_g4",
             SkillCategory: "Grammar",
-            Prompt: "Complete the conditional statement: If the client ________ our proposal yesterday, we ________ the project today.",
-            Options: new[] { "approved; would start", "had approved; would be starting", "has approved; will start", "would approve; had started" },
+            Prompt: "Choose the correct past sequence: When we arrived at the conference hall, the keynote speech ________ already ________.",
+            Options: new[] { "has; begun", "had; begun", "was; began", "did; begin" },
             CorrectOptionIndex: 1,
+            Difficulty: "Standard"
+        ),
+        new(
+            Id: "diag_g5",
+            SkillCategory: "Grammar",
+            Prompt: "Complete the statement regarding tomorrow's deadline: By 5:00 PM tomorrow, our engineering team ________ the final release.",
+            Options: new[] { "will have deployed", "will be deploy", "has deployed", "had been deploying" },
+            CorrectOptionIndex: 0,
             Difficulty: "Advanced"
         ),
 
