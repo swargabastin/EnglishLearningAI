@@ -14,4 +14,12 @@ public interface ISpeechToTextService
         string languageCode = "en-US",
         CancellationToken cancellationToken = default
     );
+
+    Task<SpeechRecognitionResult> TranscribeAsync(
+        Stream audioStream,
+        string contentType,
+        string languageCode,
+        string? promptHint,
+        CancellationToken cancellationToken = default
+    );
 }

@@ -108,13 +108,61 @@ export function InteractiveMicControl({
           </div>
         )}
 
-        <h3 className="text-sm sm:text-base font-bold text-slate-200 pt-0.5">
-          {!isRecording && !isProcessing && !isAiResponding && !hasError && "Tap the microphone to speak your response"}
-          {isRecording && (liveTranscript ? `"${liveTranscript}"` : "Speak naturally in English. Tap Stop when finished.")}
-          {isProcessing && "Transcribing audio & evaluating with Emma..."}
-          {isAiResponding && "Listen to Emma's spoken response"}
-          {hasError && (typeof currentError === "string" && currentError.includes("OPENAI_API_KEY") ? "Configure OPENAI_API_KEY for live turns or use test mode." : typeof currentError === "string" ? currentError : "Speech processing encountered an issue")}
-        </h3>
+        <div className="pt-0.5">
+          {!isRecording && !isProcessing && !isAiResponding && !hasError && (
+            <h3 className="text-sm sm:text-base font-bold text-slate-200">
+              Tap the microphone to speak your response
+            </h3>
+          )}
+
+          {isRecording && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                Live Speech Recognition
+              </h3>
+              <div className="p-3 bg-purple-950/40 border border-purple-800/40 rounded-2xl min-h-[48px] flex items-center justify-center">
+                {liveTranscript ? (
+                  <p className="text-sm sm:text-base font-bold text-white tracking-wide animate-fade-in">
+                    &ldquo;{liveTranscript}&rdquo;
+                  </p>
+                ) : (
+                  <p className="text-xs sm:text-sm text-slate-400 italic">
+                    Listening for your voice... speak naturally in English
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="space-y-1">
+              <h3 className="text-sm sm:text-base font-bold text-purple-300">
+                Evaluating with Emma...
+              </h3>
+              {liveTranscript && (
+                <p className="text-xs text-slate-400 truncate max-w-md mx-auto">
+                  &ldquo;{liveTranscript}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
+
+          {isAiResponding && (
+            <h3 className="text-sm sm:text-base font-bold text-indigo-300">
+              Listen to Emma&apos;s spoken response
+            </h3>
+          )}
+
+          {hasError && (
+            <h3 className="text-xs sm:text-sm font-semibold text-rose-300">
+              {typeof currentError === "string" && currentError.includes("OPENAI_API_KEY")
+                ? "Configure OPENAI_API_KEY for live turns or speak clearly into the microphone."
+                : typeof currentError === "string"
+                ? currentError
+                : "Speech processing encountered an issue"}
+            </h3>
+          )}
+        </div>
       </div>
 
       {/* Decorative Waveform Indicator */}

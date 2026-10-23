@@ -21,9 +21,11 @@ interface BrowserSpeechRecognition {
   interimResults: boolean;
   lang: string;
   onresult: ((event: Event) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: Event) => void) | null;
+  onend: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 }
 
 export function useAudioRecorder(): AudioRecorderHook {
@@ -39,6 +41,7 @@ export function useAudioRecorder(): AudioRecorderHook {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const transcriptAccumulatorRef = useRef<string>("");
+  const isRecordingRef = useRef<boolean>(false);
 
   // Check browser MediaRecorder support
   useEffect(() => {
@@ -52,6 +55,7 @@ export function useAudioRecorder(): AudioRecorderHook {
   }, []);
 
   const cleanupStream = useCallback(() => {
+    isRecordingRef.current = false;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -62,6 +66,8 @@ export function useAudioRecorder(): AudioRecorderHook {
     }
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.onerror = null;
         recognitionRef.current.stop();
       } catch {
         // Ignored
@@ -125,6 +131,7 @@ export function useAudioRecorder(): AudioRecorderHook {
 
       streamRef.current = stream;
       chunksRef.current = [];
+      isRecordingRef.current = true;
 
       const mimeType = getSupportedMimeType();
       const options = mimeType ? { mimeType } : undefined;
@@ -139,39 +146,77 @@ export function useAudioRecorder(): AudioRecorderHook {
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start(200); // collect 200ms slices
 
-      // Concurrently start Web Speech API recognition for instant browser transcription
+      // Concurrently start Web Speech API recognition for high-accuracy local speech-to-text
       try {
         if (typeof window !== "undefined") {
           const win = window as unknown as Record<string, unknown>;
           const SpeechRecognitionClass = (win.SpeechRecognition || win.webkitSpeechRecognition) as
             | (new () => BrowserSpeechRecognition)
             | undefined;
+
           if (SpeechRecognitionClass) {
             const recognition = new SpeechRecognitionClass();
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = "en-US";
+
             recognition.onresult = (event: Event) => {
-              const recEvent = event as unknown as { results: { [key: number]: { [key: number]: { transcript: string } }; length: number } };
-              let full = "";
+              const recEvent = event as unknown as {
+                results: {
+                  [key: number]: {
+                    isFinal?: boolean;
+                    [key: number]: { transcript: string };
+                  };
+                  length: number;
+                };
+              };
+
+              let finalPart = "";
+              let interimPart = "";
+
               for (let i = 0; i < recEvent.results.length; i++) {
-                full += recEvent.results[i][0].transcript + " ";
+                const res = recEvent.results[i];
+                if (res && res[0]) {
+                  if (res.isFinal) {
+                    finalPart += res[0].transcript + " ";
+                  } else {
+                    interimPart += res[0].transcript + " ";
+                  }
+                }
               }
-              const trimmed = full.trim();
-              if (trimmed) {
-                transcriptAccumulatorRef.current = trimmed;
-                setLiveTranscript(trimmed);
+
+              const full = (finalPart + interimPart).trim();
+              if (full) {
+                transcriptAccumulatorRef.current = full;
+                setLiveTranscript(full);
               }
             };
-            recognition.onerror = () => {
-              // Non-blocking fallback
+
+            recognition.onerror = (event: Event) => {
+              const err = (event as unknown as { error?: string })?.error;
+              if (err === "no-speech" || err === "aborted") {
+                return;
+              }
+              console.warn("Speech recognition notice:", err);
             };
+
+            recognition.onend = () => {
+              // Automatically restart recognition if user is still actively recording
+              if (isRecordingRef.current) {
+                try {
+                  recognition.start();
+                } catch {
+                  // Ignore if already starting
+                }
+              }
+            };
+
             recognition.start();
             recognitionRef.current = recognition;
           }
         }
-      } catch {
-        // Web Speech API is optional; MediaRecorder handles audio stream
+      } catch (e) {
+        console.warn("Browser Web Speech API unavailable:", e);
       }
 
       setState("recording");
@@ -185,11 +230,11 @@ export function useAudioRecorder(): AudioRecorderHook {
       setState("error");
       const error = err as Error;
       if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-        setErrorMessage("Microphone access was denied. Please click the lock or camera icon in your browser address bar and allow microphone permissions.");
+        setErrorMessage("Microphone access was denied. Please click the lock icon in your browser address bar and allow microphone permissions.");
       } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
-        setErrorMessage("No active microphone was detected by the browser. Check if your headset/mic is plugged in, selected in Windows Sound settings, or switch to Keyboard mode.");
+        setErrorMessage("No active microphone was detected by the browser. Check if your headset/mic is plugged in and selected in Windows Sound settings.");
       } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
-        setErrorMessage("Your microphone is currently in use by another app (e.g. Teams, Zoom, or Discord) or blocked by exclusive mode.");
+        setErrorMessage("Your microphone is currently in use by another app or blocked by exclusive mode.");
       } else {
         setErrorMessage("Unable to access microphone: " + (error.message || "Unknown error"));
       }
@@ -198,8 +243,18 @@ export function useAudioRecorder(): AudioRecorderHook {
 
   const stopRecording = useCallback(async (): Promise<{ blob: Blob | null; transcript: string }> => {
     return new Promise((resolve) => {
+      isRecordingRef.current = false;
       const recorder = mediaRecorderRef.current;
       const capturedTranscript = transcriptAccumulatorRef.current;
+
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.onend = null;
+          recognitionRef.current.stop();
+        } catch {
+          // Ignored
+        }
+      }
 
       if (!recorder || recorder.state === "inactive") {
         cleanupStream();
@@ -213,11 +268,12 @@ export function useAudioRecorder(): AudioRecorderHook {
       recorder.onstop = () => {
         const mimeType = recorder.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: mimeType });
+        const finalTranscript = transcriptAccumulatorRef.current || capturedTranscript;
         cleanupStream();
         setState("idle");
         resolve({
           blob: blob.size > 0 ? blob : null,
-          transcript: capturedTranscript,
+          transcript: finalTranscript,
         });
       };
 
@@ -232,6 +288,7 @@ export function useAudioRecorder(): AudioRecorderHook {
   }, [cleanupStream]);
 
   const cancelRecording = useCallback(() => {
+    isRecordingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();

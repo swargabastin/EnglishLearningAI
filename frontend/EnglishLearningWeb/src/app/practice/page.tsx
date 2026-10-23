@@ -233,11 +233,11 @@ function PracticeContent() {
     setErrorMessage(null);
 
     try {
-      const speechResp = await conversationService.sendSpeech(activeSession.id, audioBlob);
+      const speechResp = await conversationService.sendSpeech(activeSession.id, audioBlob, liveTranscript);
 
       const recognized =
-        liveTranscript?.trim() ||
         speechResp.recognizedText ||
+        liveTranscript?.trim() ||
         speechResp.userMessage?.messageText ||
         "Spoken turn";
 

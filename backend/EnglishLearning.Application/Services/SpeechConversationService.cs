@@ -63,22 +63,36 @@ public class SpeechConversationService : ISpeechConversationService
         string fileName,
         string contentType,
         long fileLength,
+        string? clientTranscript = null,
         CancellationToken cancellationToken = default)
     {
         ValidateAudioUpload(fileName, contentType, fileLength);
 
-        _logger.LogInformation("Processing speech input for session '{SessionId}' (File: '{FileName}', Type: '{ContentType}', Size: {Bytes} bytes)",
-            sessionId, fileName, contentType, fileLength);
+        _logger.LogInformation("Processing speech input for session '{SessionId}' (File: '{FileName}', Type: '{ContentType}', Size: {Bytes} bytes, ClientTranscript: '{ClientTranscript}')",
+            sessionId, fileName, contentType, fileLength, clientTranscript);
 
-        // 1. Transcribe speech to text via ISpeechToTextService
-        var sttResult = await _sttService.TranscribeAsync(audioStream, contentType, "en-US", cancellationToken);
+        // 1. Transcribe speech to text via ISpeechToTextService (with client transcript hint if available)
+        SpeechRecognitionResult? sttResult;
+        if (!string.IsNullOrWhiteSpace(clientTranscript))
+        {
+            sttResult = await _sttService.TranscribeAsync(audioStream, contentType, "en-US", clientTranscript, cancellationToken);
+        }
+        else
+        {
+            sttResult = await _sttService.TranscribeAsync(audioStream, contentType, "en-US", cancellationToken);
+        }
 
-        if (string.IsNullOrWhiteSpace(sttResult.Transcript))
+        var recognizedText = sttResult?.Transcript?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(recognizedText) && !string.IsNullOrWhiteSpace(clientTranscript))
+        {
+            recognizedText = clientTranscript.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(recognizedText))
         {
             throw new InvalidAudioException("No speech could be recognized from the audio. Please speak clearly into your microphone.");
         }
 
-        var recognizedText = sttResult.Transcript.Trim();
         _logger.LogInformation("Speech recognized successfully for session '{SessionId}': \"{Transcript}\"", sessionId, recognizedText);
 
         // 2. Feed recognized text into the existing Phase 6 Conversation pipeline

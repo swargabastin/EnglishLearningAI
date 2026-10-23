@@ -89,10 +89,17 @@ export const conversationService = {
     return response.data;
   },
 
-  async sendSpeech(sessionId: string, audioBlob: Blob): Promise<SpeechConversationResponseDto> {
+  async sendSpeech(
+    sessionId: string,
+    audioBlob: Blob,
+    clientTranscript?: string
+  ): Promise<SpeechConversationResponseDto> {
     const formData = new FormData();
     const extension = audioBlob.type.includes("mp4") ? "mp4" : audioBlob.type.includes("wav") ? "wav" : "webm";
     formData.append("audio", audioBlob, `recording_${Date.now()}.${extension}`);
+    if (clientTranscript && clientTranscript.trim()) {
+      formData.append("clientTranscript", clientTranscript.trim());
+    }
 
     const response = await apiRequest<ApiResult<SpeechConversationResponseDto>>(`/conversations/${sessionId}/speech`, {
       method: "POST",

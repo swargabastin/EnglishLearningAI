@@ -70,7 +70,11 @@ public class ConversationsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<SpeechConversationResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendSpeech(Guid sessionId, IFormFile? audio, CancellationToken cancellationToken)
+    public async Task<IActionResult> SendSpeech(
+        Guid sessionId, 
+        IFormFile? audio, 
+        [FromForm] string? clientTranscript, 
+        CancellationToken cancellationToken)
     {
         if (audio == null || audio.Length == 0)
         {
@@ -84,6 +88,7 @@ public class ConversationsController : ControllerBase
             audio.FileName,
             audio.ContentType,
             audio.Length,
+            clientTranscript,
             cancellationToken
         );
 

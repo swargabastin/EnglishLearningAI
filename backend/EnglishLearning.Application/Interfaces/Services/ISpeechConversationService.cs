@@ -10,6 +10,7 @@ public interface ISpeechConversationService
         string fileName,
         string contentType,
         long fileLength,
+        string? clientTranscript = null,
         CancellationToken cancellationToken = default
     );
 }
