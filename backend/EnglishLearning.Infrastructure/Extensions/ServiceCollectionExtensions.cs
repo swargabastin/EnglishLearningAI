@@ -15,7 +15,28 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var envDbUrl = configuration["DATABASE_URL"] ?? configuration["DATABASE_URL_UNPOOLED"];
+        var connectionString = !string.IsNullOrWhiteSpace(envDbUrl)
+            ? envDbUrl
+            : configuration.GetConnectionString("DefaultConnection");
+
+        if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo.Split(':');
+                var username = userInfo[0];
+                var password = userInfo.Length > 1 ? userInfo[1] : "";
+                var database = uri.AbsolutePath.TrimStart('/');
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                connectionString = $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+            }
+            catch
+            {
+                // Fall back to raw connection string
+            }
+        }
 
         services.AddDbContext<AppDbContext>(options =>
         {
