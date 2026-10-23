@@ -70,16 +70,26 @@ builder.Services.AddScoped<IPronunciationAssessmentService, PronunciationAssessm
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
 // Configure JWT Authentication
+const string DevelopmentJwtSecret = "EnglishLearningAI_DevelopmentSecretKey_MustBeAtLeast32BytesLong_2026!";
 var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(jwtSecret))
+
+if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Testing")
 {
-    if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Testing")
+    if (string.IsNullOrWhiteSpace(jwtSecret))
     {
-        jwtSecret = "EnglishLearningAI_DevelopmentSecretKey_MustBeAtLeast32BytesLong_2026!";
+        jwtSecret = DevelopmentJwtSecret;
     }
-    else
+}
+else
+{
+    if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret == DevelopmentJwtSecret)
     {
-        throw new InvalidOperationException("Fatal configuration error: 'Jwt:Secret' must be provided in non-development environments.");
+        throw new InvalidOperationException("Fatal configuration error: A unique, secure 'Jwt:Secret' must be provided in non-development environments. The known development secret is forbidden in production.");
+    }
+
+    if (Encoding.UTF8.GetByteCount(jwtSecret) < 32)
+    {
+        throw new InvalidOperationException("Fatal configuration error: 'Jwt:Secret' must be at least 256 bits (32 bytes) long.");
     }
 }
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "EnglishLearningAI";

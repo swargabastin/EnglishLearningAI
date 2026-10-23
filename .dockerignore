@@ -1,0 +1,17 @@
+**/.git
+**/.github
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/TestResults
+frontend/
+tests/
+docs/
+*.zip
+*.sql
+*.dump
+*.backup
+*.md
+.env*
+**/logs

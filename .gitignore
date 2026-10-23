@@ -28,6 +28,17 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 *.secrets.json
+appsettings.Production.json
+appsettings.Production.*.json
+
+# Runtime Uploads & Storage
+uploads/
+**/uploads/
+
+# Database dumps & exports
+*.sql
+*.dump
+*.backup
 
 # Logs
 logs/
