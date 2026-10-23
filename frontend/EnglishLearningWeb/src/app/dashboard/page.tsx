@@ -83,7 +83,7 @@ export default function DashboardPage() {
     learningGoal: "Speaking Fluency" as const,
     dailyPracticeTargetMinutes: 15,
     todayPracticeMinutes: stats?.totalPracticeMinutes ? Math.min(stats.totalPracticeMinutes, 15) : 0,
-    streakDays: stats?.streakDays ?? 0,
+    streakDays: 1,
     createdAt: new Date().toISOString(),
     preferences: {
       tutorVoice: "alloy" as const,

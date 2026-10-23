@@ -35,5 +35,11 @@ public record UserProfileDto(
     string Email,
     string EnglishLevel,
     string LearningGoal,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? AvatarUrl = null
+);
+
+public record AvatarUploadResponse(
+    string AvatarUrl,
+    string Message
 );

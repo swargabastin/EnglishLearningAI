@@ -53,14 +53,23 @@ public class AdaptiveLearningController : ControllerBase
         return Ok(ApiResponse<LearnerAssessmentResultDto?>.Ok(assessment));
     }
 
+    [HttpGet("objectives")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<LearningObjectiveDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllObjectives(CancellationToken cancellationToken)
+    {
+        var objectives = await _adaptiveLearningService.GetAllObjectivesAsync(cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<LearningObjectiveDto>>.Ok(objectives));
+    }
+
     [HttpGet("plan/today")]
     [ProducesResponseType(typeof(ApiResponse<DailyStudyPlanDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTodayPlan(
         [FromQuery] string? date = null,
         [FromQuery] bool forceRegenerate = false,
+        [FromQuery] string? objective = null,
         CancellationToken cancellationToken = default)
     {
-        var plan = await _adaptiveLearningService.GetOrCreateTodayPlanAsync(date, forceRegenerate, cancellationToken);
+        var plan = await _adaptiveLearningService.GetOrCreateTodayPlanAsync(date, forceRegenerate, objective, cancellationToken);
         return Ok(ApiResponse<DailyStudyPlanDto>.Ok(plan));
     }
 

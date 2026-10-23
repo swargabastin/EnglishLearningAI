@@ -419,4 +419,61 @@ public class AdaptiveLearningServiceTests
         // Assert
         await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
+
+    [Fact]
+    public async Task GetAllObjectivesAsync_ShouldReturnCatalogWithMasteryStatus()
+    {
+        // Arrange
+        var seededObjectives = CurriculumCatalog.MasterObjectives;
+        _repositoryMock.Setup(r => r.GetAllActiveObjectivesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(seededObjectives);
+
+        var mastery = new LearnerSkillMastery
+        {
+            UserId = _userId,
+            ObjectiveCode = "OBJ_B_PRES_SIMPLE",
+            MasteryScore = 90.0m,
+            IsMastered = true
+        };
+        _repositoryMock.Setup(r => r.GetAllSkillMasteriesAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { mastery });
+
+        // Act
+        var result = await _service.GetAllObjectivesAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Count.Should().BeGreaterOrEqualTo(12);
+        var simplePresent = result.FirstOrDefault(o => o.Code == "OBJ_B_PRES_SIMPLE");
+        simplePresent.Should().NotBeNull();
+        simplePresent!.IsMastered.Should().BeTrue();
+        simplePresent.MasteryScore.Should().Be(90.0m);
+    }
+
+    [Fact]
+    public async Task GetOrCreateTodayPlanAsync_WithTargetObjective_ShouldGeneratePlanForRequestedTense()
+    {
+        // Arrange
+        var seededObjectives = CurriculumCatalog.MasterObjectives;
+        _repositoryMock.Setup(r => r.GetAllActiveObjectivesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(seededObjectives);
+        _repositoryMock.Setup(r => r.GetStudyPlanByDateAsync(_userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StudyPlan?)null);
+
+        StudyPlan? capturedPlan = null;
+        _repositoryMock.Setup(r => r.AddStudyPlanAsync(It.IsAny<StudyPlan>(), It.IsAny<CancellationToken>()))
+            .Callback<StudyPlan, CancellationToken>((p, ct) => capturedPlan = p)
+            .Returns(Task.CompletedTask);
+
+        _repositoryMock.Setup(r => r.GetStudyPlanWithPhasesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => capturedPlan);
+
+        // Act
+        var result = await _service.GetOrCreateTodayPlanAsync(targetObjectiveCode: "OBJ_S_PAST_PERF");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.ObjectiveCode.Should().Be("OBJ_S_PAST_PERF");
+        result.Phases.Should().HaveCount(4);
+    }
 }

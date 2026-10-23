@@ -16,6 +16,7 @@ public class ConversationsController : ControllerBase
     private readonly IConversationService _conversationService;
     private readonly ISpeechConversationService _speechService;
     private readonly IAssessmentService _assessmentService;
+    private readonly IPronunciationAssessmentService _pronunciationService;
     private readonly IValidator<StartConversationRequest> _startValidator;
     private readonly IValidator<SendMessageRequest> _messageValidator;
 
@@ -23,14 +24,24 @@ public class ConversationsController : ControllerBase
         IConversationService conversationService,
         ISpeechConversationService speechService,
         IAssessmentService assessmentService,
+        IPronunciationAssessmentService pronunciationService,
         IValidator<StartConversationRequest> startValidator,
         IValidator<SendMessageRequest> messageValidator)
     {
         _conversationService = conversationService;
         _speechService = speechService;
         _assessmentService = assessmentService;
+        _pronunciationService = pronunciationService;
         _startValidator = startValidator;
         _messageValidator = messageValidator;
+    }
+
+    [HttpPost("pronunciation/score")]
+    [ProducesResponseType(typeof(ApiResponse<PronunciationAssessmentDto>), StatusCodes.Status200OK)]
+    public IActionResult ScorePronunciation([FromBody] PronunciationScoreRequest request)
+    {
+        var result = _pronunciationService.EvaluatePronunciation(request.SpokenText, request.TargetPhrase);
+        return Ok(ApiResponse<PronunciationAssessmentDto>.Ok(result, "Pronunciation breakdown evaluated."));
     }
 
     [HttpPost]

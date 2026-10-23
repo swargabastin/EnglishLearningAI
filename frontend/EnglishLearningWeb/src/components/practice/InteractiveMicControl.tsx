@@ -12,6 +12,7 @@ export interface InteractiveMicControlProps {
   onSendSpeechBlob: (audioBlob: Blob, liveTranscript?: string) => Promise<void>;
   onSwitchToKeyboard?: () => void;
   onRetry?: () => void;
+  onBargeIn?: () => void;
   errorMessage?: string | null;
   onClearError?: () => void;
   disabled?: boolean;
@@ -22,26 +23,46 @@ export function InteractiveMicControl({
   onSendSpeechBlob,
   onSwitchToKeyboard,
   onRetry,
+  onBargeIn,
   errorMessage: parentError,
   onClearError,
   disabled = false,
 }: InteractiveMicControlProps) {
+  const isAiResponding = speechState === "ai_responding";
+  const isProcessing = speechState === "processing";
+
   const {
     state: recorderState,
     errorMessage: recorderError,
     recordingDurationSec,
     liveTranscript,
+    isHandsFree,
+    setIsHandsFree,
     startRecording,
     stopRecording,
     clearError,
     isSupported,
-  } = useAudioRecorder();
+  } = useAudioRecorder({
+    isAiSpeaking: isAiResponding,
+    onBargeIn,
+    onAutoSubmitTurn: async (blob, transcript) => {
+      await onSendSpeechBlob(blob, transcript);
+    },
+  });
 
   const isRecording = recorderState === "recording";
-  const isProcessing = speechState === "processing" || recorderState === "processing";
-  const isAiResponding = speechState === "ai_responding";
   const hasError = speechState === "error" || Boolean(parentError || recorderError);
   const currentError = parentError || recorderError;
+
+  // In hands-free mode: auto-rearm microphone once AI finishes speaking
+  React.useEffect(() => {
+    if (isHandsFree && !isAiResponding && !isProcessing && recorderState === "idle" && !hasError) {
+      const timer = setTimeout(() => {
+        startRecording().catch(() => {});
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isHandsFree, isAiResponding, isProcessing, recorderState, hasError, startRecording]);
 
   const handleMicClick = async () => {
     if (disabled || isProcessing || isAiResponding) return;
@@ -218,6 +239,12 @@ export function InteractiveMicControl({
         <p className="text-xs font-semibold text-slate-400 tracking-wide">
           {hasError
             ? "Tap to retry"
+            : isHandsFree
+            ? isRecording
+              ? "Hands-free listening (pausing auto-sends)..."
+              : isAiResponding
+              ? "Emma is speaking (speak to interrupt)..."
+              : "Hands-free ready (start speaking)..."
             : isRecording
             ? "Tap to Stop & Send"
             : isProcessing
@@ -226,6 +253,26 @@ export function InteractiveMicControl({
             ? "Emma is responding..."
             : "Tap to Speak"}
         </p>
+
+        {/* Full-Duplex Hands-Free Mode Toggle */}
+        <div className="flex items-center justify-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setIsHandsFree(!isHandsFree)}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+              isHandsFree
+                ? "bg-emerald-950/70 border border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30 shadow-md"
+                : "bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isHandsFree ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
+              }`}
+            />
+            <span>Live Hands-Free Duplex: {isHandsFree ? "ON" : "OFF"}</span>
+          </button>
+        </div>
 
         {/* Secondary Error Recovery Actions */}
         {hasError && (

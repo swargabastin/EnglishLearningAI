@@ -45,4 +45,30 @@ export const authService = {
 
     return response.data;
   },
+
+  async uploadAvatar(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("el_access_token") : null;
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5288").replace(/\/+$/, "");
+    const url = `${apiBase}/api/v1/auth/avatar`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.detail || errJson?.message || "Failed to upload avatar photo.");
+    }
+
+    const json = await res.json();
+    const avatarPath = json.data?.avatarUrl || `/api/v1/auth/avatar`;
+    return avatarPath.startsWith("http") ? avatarPath : `${apiBase}${avatarPath}`;
+  },
 };

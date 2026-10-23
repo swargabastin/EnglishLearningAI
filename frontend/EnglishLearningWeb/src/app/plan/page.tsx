@@ -11,6 +11,7 @@ import {
   LearningPlanHistory,
   AssessmentQuestion,
   PhaseTask,
+  LearningObjectiveItem,
 } from "@/types";
 import {
   Sparkles,
@@ -44,12 +45,15 @@ import { Modal } from "@/components/ui/Modal";
 
 export default function StudyPlanPage() {
   // Navigation / Tab state
-  const [activeTab, setActiveTab] = useState<"plan" | "assessment" | "history">("plan");
+  const [activeTab, setActiveTab] = useState<"plan" | "curriculum" | "assessment" | "history">("plan");
 
   // Core Data States
   const [assessment, setAssessment] = useState<LearnerAssessmentResult | null>(null);
   const [todayPlan, setTodayPlan] = useState<DailyStudyPlan | null>(null);
   const [history, setHistory] = useState<LearningPlanHistory | null>(null);
+  const [objectives, setObjectives] = useState<LearningObjectiveItem[]>([]);
+  const [tenseFilter, setTenseFilter] = useState<string>("All");
+  const [isSwitchingTense, setIsSwitchingTense] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -99,6 +103,10 @@ export default function StudyPlanPage() {
       // 3. Fetch history
       const historyData = await adaptiveLearningService.getLearningHistory();
       setHistory(historyData);
+
+      // 4. Fetch all curriculum objectives / tenses
+      const allObjectives = await adaptiveLearningService.getAllObjectives();
+      setObjectives(allObjectives);
     } catch (err: unknown) {
       setErrorMessage((err as Error).message || "Failed to load study plan.");
     } finally {
@@ -193,6 +201,24 @@ export default function StudyPlanPage() {
     }
   };
 
+  const handleSwitchTense = async (objectiveCode: string) => {
+    setIsSwitchingTense(objectiveCode);
+    setErrorMessage(null);
+    try {
+      const newPlan = await adaptiveLearningService.getTodayPlan(true, objectiveCode);
+      setTodayPlan(newPlan);
+      setSelectedPhaseIndex(0);
+      setActiveTimerSeconds(0);
+      setIsTimerRunning(true);
+      setPhaseFeedback(null);
+      setActiveTab("plan");
+    } catch (err: unknown) {
+      setErrorMessage((err as Error).message || "Failed to switch tense.");
+    } finally {
+      setIsSwitchingTense(null);
+    }
+  };
+
   // Handlers for Diagnostic Level Assessment
   const handleOpenDiagnostic = async () => {
     try {
@@ -282,7 +308,7 @@ export default function StudyPlanPage() {
           </div>
 
           {/* Tab Switcher */}
-          <div className="flex items-center bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto gap-1">
             <button
               onClick={() => setActiveTab("plan")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -292,6 +318,16 @@ export default function StudyPlanPage() {
               }`}
             >
               Today&apos;s Plan
+            </button>
+            <button
+              onClick={() => setActiveTab("curriculum")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "curriculum"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              All 12 Tenses
             </button>
             <button
               onClick={() => setActiveTab("assessment")}
@@ -348,7 +384,7 @@ export default function StudyPlanPage() {
             <div className="p-5 sm:p-6 bg-slate-900 border border-slate-800 rounded-3xl shadow-lg space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                     <span className="text-xs font-extrabold text-indigo-400">
                       TODAY&apos;S LEARNING OBJECTIVE
                     </span>
@@ -364,16 +400,28 @@ export default function StudyPlanPage() {
                   </h2>
                 </div>
 
-                {/* Target vs Actual Active Learning Time */}
-                <div className="flex items-center space-x-4 bg-slate-850 p-3 rounded-2xl border border-slate-800">
-                  <div className="space-y-0.5 text-right">
-                    <p className="text-[11px] text-slate-400 font-medium">Active Learning</p>
-                    <p className="text-sm font-extrabold text-white">
-                      {todayPlan.actualMinutes} / {todayPlan.targetMinutes} min
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
-                    <Clock className="w-5 h-5" />
+                <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("curriculum")}
+                    className="border-indigo-500/40 text-indigo-300 hover:bg-indigo-950/50 hover:text-white text-xs"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+                    Browse All 12 Tenses
+                  </Button>
+
+                  {/* Target vs Actual Active Learning Time */}
+                  <div className="flex items-center space-x-4 bg-slate-850 p-2.5 sm:p-3 rounded-2xl border border-slate-800">
+                    <div className="space-y-0.5 text-right">
+                      <p className="text-[11px] text-slate-400 font-medium">Active Learning</p>
+                      <p className="text-sm font-extrabold text-white">
+                        {todayPlan.actualMinutes} / {todayPlan.targetMinutes} min
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
+                      <Clock className="w-5 h-5" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -676,6 +724,125 @@ export default function StudyPlanPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: ALL 12 ENGLISH TENSES & CURRICULUM */}
+        {!isLoading && activeTab === "curriculum" && (
+          <div className="space-y-6">
+            <div className="p-6 sm:p-8 bg-gradient-to-br from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-extrabold text-indigo-400 uppercase tracking-wide">
+                  Complete Curriculum Catalog
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white">
+                  All 12 English Tenses
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+                  Select any tense to instantly tailor today&apos;s 4-phase structured daily plan (Rules, Sentence Making, Quiz, and AI Speaking Practice).
+                </p>
+              </div>
+
+              {/* Tense Filter Pills */}
+              <div className="flex flex-wrap gap-1.5 self-start sm:self-auto">
+                {["All", "Present", "Past", "Future", "Mastered"].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setTenseFilter(filter)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      tenseFilter === filter
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-slate-850 text-slate-400 hover:text-white border border-slate-800"
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tenses Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {objectives
+                .filter((obj) => {
+                  if (tenseFilter === "Present") return obj.code.includes("PRES");
+                  if (tenseFilter === "Past") return obj.code.includes("PAST");
+                  if (tenseFilter === "Future") return obj.code.includes("FUTURE");
+                  if (tenseFilter === "Mastered") return obj.isMastered;
+                  return true;
+                })
+                .map((obj) => {
+                  const isCurrentPlanTense = todayPlan?.objectiveCode === obj.code;
+                  const isSwitchingThis = isSwitchingTense === obj.code;
+
+                  return (
+                    <div
+                      key={obj.id}
+                      className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-4 ${
+                        isCurrentPlanTense
+                          ? "bg-indigo-950/40 border-indigo-500/80 shadow-lg ring-1 ring-indigo-500/30"
+                          : "bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-850/60"
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-[10px] font-bold text-slate-400">
+                            {obj.code}
+                          </span>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-indigo-300">
+                              {obj.cefrLevel} · {obj.difficulty}
+                            </span>
+                            {obj.isMastered ? (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-800/50 text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                {obj.masteryScore ? `${Math.round(obj.masteryScore)}%` : "Mastered"}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-base font-bold text-white leading-snug">
+                            {obj.title}
+                          </h3>
+                          <p className="text-xs text-slate-300 mt-1 line-clamp-3 leading-relaxed">
+                            {obj.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          ~{obj.suggestedDurationMinutes} min lesson
+                        </span>
+
+                        {isCurrentPlanTense ? (
+                          <span className="px-3 py-1 rounded-xl bg-indigo-900/60 border border-indigo-500/40 text-[11px] font-bold text-indigo-200 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                            Assigned Today
+                          </span>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            disabled={!!isSwitchingTense}
+                            onClick={() => handleSwitchTense(obj.code)}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-xs px-3 py-1.5"
+                          >
+                            {isSwitchingThis ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                            ) : (
+                              <Play className="w-3 h-3 mr-1" />
+                            )}
+                            Study Today
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
 

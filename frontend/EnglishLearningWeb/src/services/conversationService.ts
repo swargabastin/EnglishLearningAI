@@ -1,5 +1,5 @@
 import { apiRequest } from "./apiClient";
-import { ApiResult, CEFRLevel } from "@/types";
+import { ApiResult, CEFRLevel, PronunciationAssessment } from "@/types";
 
 export interface ConversationMessageDto {
   id: string;
@@ -40,6 +40,7 @@ export interface SpeechConversationResponseDto {
   audioBase64?: string;
   audioContentType: string;
   pedagogicalTip?: string;
+  pronunciation?: PronunciationAssessment;
 }
 
 export interface TopicDto {
@@ -143,5 +144,18 @@ export const conversationService = {
     });
 
     return response.data || [];
+  },
+
+  async scorePronunciation(spokenText: string, targetPhrase?: string): Promise<PronunciationAssessment> {
+    const response = await apiRequest<ApiResult<PronunciationAssessment>>("/conversations/pronunciation/score", {
+      method: "POST",
+      body: JSON.stringify({ spokenText, targetPhrase }),
+    });
+
+    if (!response.data) {
+      throw new Error(response.message || "Failed to score pronunciation.");
+    }
+
+    return response.data;
   },
 };

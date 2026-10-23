@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, Mail, Calendar, Save, CheckCircle2, Globe } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { User, Mail, Calendar, Save, CheckCircle2, Globe, Camera, Loader2, AlertCircle } from "lucide-react";
 import { UserProfile } from "@/types";
+import { authService } from "@/services/authService";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -13,15 +14,38 @@ import { useLanguage } from "@/context/LanguageContext";
 export function ProfileOverview({
   user,
   onSave,
+  onAvatarUpdated,
 }: {
   user: UserProfile;
   onSave: (name: string, email: string) => void;
+  onAvatarUpdated?: (avatarUrl: string) => void;
 }) {
   const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [dailyTarget, setDailyTarget] = useState(user.dailyPracticeTargetMinutes);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    setUploadError(null);
+    try {
+      const newUrl = await authService.uploadAvatar(file);
+      setAvatarUrl(newUrl);
+      onAvatarUpdated?.(newUrl);
+    } catch (err: unknown) {
+      setUploadError((err as Error).message || "Failed to upload avatar photo.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,15 +58,59 @@ export function ProfileOverview({
     <Card>
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
         <div className="flex items-center space-x-4">
-          <Avatar src={user.avatarUrl} name={name} size="lg" />
+          <div className="relative group shrink-0">
+            <Avatar src={avatarUrl || user.avatarUrl} name={name} size="lg" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="absolute inset-0 bg-slate-950/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
+              title="Click to upload profile photo"
+            >
+              {isUploadingAvatar ? (
+                <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+              ) : (
+                <>
+                  <Camera className="w-5 h-5 text-purple-300" />
+                  <span className="text-[9px] font-bold mt-0.5">Edit</span>
+                </>
+              )}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+          </div>
+
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <CardTitle className="text-lg font-bold text-white">{name}</CardTitle>
               <Badge cefrLevel={user.level} size="sm" />
             </div>
-            <p className="text-xs text-slate-400">
-              Active Member since June 2026 • {user.streakDays} Day Practice Streak
-            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 underline flex items-center gap-1"
+              >
+                <Camera className="w-3 h-3" />
+                <span>{isUploadingAvatar ? "Uploading..." : "Upload photo"}</span>
+              </button>
+              <span className="text-slate-600">•</span>
+              <p className="text-xs text-slate-400">
+                {user.streakDays} Day Practice Streak
+              </p>
+            </div>
+            {uploadError && (
+              <p className="text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                <AlertCircle className="w-3 h-3" />
+                <span>{uploadError}</span>
+              </p>
+            )}
           </div>
         </div>
 

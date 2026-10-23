@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -37,7 +38,10 @@ export default function RootLayout({
     <html lang="en" className={jakarta.variable}>
       <body className="min-h-screen flex flex-col font-sans antialiased bg-slate-950 text-slate-100 selection:bg-purple-600 selection:text-white">
         <AuthProvider>
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider>
+            <ServiceWorkerRegister />
+            {children}
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

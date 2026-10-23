@@ -35,15 +35,19 @@ export default function ProfilePage() {
   }
 
   const handleUpdateProfile = (name: string, email: string) => {
-    setUser((prev) => ({ ...prev, name, email }));
+    setUser((prev) => (prev ? { ...prev, name, email } : null));
   };
 
   const handleSelectLevel = (level: CEFRLevel) => {
-    setUser((prev) => ({ ...prev, level }));
+    setUser((prev) => (prev ? { ...prev, level } : null));
   };
 
   const handleSelectGoal = (goal: LearningGoal) => {
-    setUser((prev) => ({ ...prev, learningGoal: goal }));
+    setUser((prev) => (prev ? { ...prev, learningGoal: goal } : null));
+  };
+
+  const handleAvatarUpdated = (avatarUrl: string) => {
+    setUser((prev) => (prev ? { ...prev, avatarUrl } : null));
   };
 
   return (
@@ -55,7 +59,11 @@ export default function ProfilePage() {
         />
 
         {/* User Account Overview */}
-        <ProfileOverview user={user} onSave={handleUpdateProfile} />
+        <ProfileOverview
+          user={user}
+          onSave={handleUpdateProfile}
+          onAvatarUpdated={handleAvatarUpdated}
+        />
 
         {/* CEFR Level Selection */}
         <LevelSelector

@@ -77,6 +77,28 @@ export interface Topic {
 
 export type ConversationRole = 'user' | 'assistant' | 'system';
 
+export interface PronunciationPhonemeScore {
+  phoneme: string;
+  score: number;
+  colorHex: string;
+}
+
+export interface PronunciationWordScore {
+  word: string;
+  score: number;
+  status: "Good" | "Acceptable" | "NeedsPractice" | string;
+  phonemes: PronunciationPhonemeScore[];
+}
+
+export interface PronunciationAssessment {
+  overallScore: number;
+  accuracyScore: number;
+  fluencyScore: number;
+  completenessScore: number;
+  words: PronunciationWordScore[];
+  feedback: string;
+}
+
 export interface ConversationMessage {
   id: string;
   role: ConversationRole;
@@ -85,6 +107,7 @@ export interface ConversationMessage {
   audioDurationSec?: number;
   audioBase64?: string;
   pedagogicalTip?: string;
+  pronunciation?: PronunciationAssessment;
 }
 
 export interface VocabularyItem {
@@ -260,6 +283,20 @@ export interface PhaseCompletionResult {
   feedback: string;
   nextPhaseUnlocked: boolean;
   overallPlanStatus: StudyPlanStatus;
+}
+
+export interface LearningObjectiveItem {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  skillCategory: string;
+  difficulty: string;
+  cefrLevel: string;
+  suggestedDurationMinutes: number;
+  sortOrder: number;
+  isMastered: boolean;
+  masteryScore?: number | null;
 }
 
 export interface LearnerSkillMasteryItem {

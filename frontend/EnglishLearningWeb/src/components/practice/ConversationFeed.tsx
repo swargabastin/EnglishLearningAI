@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Play, Pause, Mic, Bot, User as UserIcon, BookmarkPlus, Check } from "lucide-react";
 import { ConversationMessage } from "@/types";
 import { vocabularyService } from "@/services/vocabularyService";
+import { PronunciationScoreCard } from "./PronunciationScoreCard";
 
 export interface ConversationFeedProps {
   messages: ConversationMessage[];
@@ -214,6 +215,9 @@ export function ConversationFeed({
                   <p className="text-sm sm:text-base leading-relaxed tracking-normal font-medium text-white">
                     &ldquo;{msg.content}&rdquo;
                   </p>
+                  {msg.pronunciation && (
+                    <PronunciationScoreCard pronunciation={msg.pronunciation} compact={false} />
+                  )}
                 </div>
               ) : (
                 <p className="text-sm sm:text-base leading-relaxed tracking-normal text-slate-200">

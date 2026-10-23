@@ -211,9 +211,41 @@ public class AdaptiveLearningService : IAdaptiveLearningService
         );
     }
 
+    public async Task<IReadOnlyList<LearningObjectiveDto>> GetAllObjectivesAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException("User is not authenticated.");
+        await EnsureCurriculumSeededAsync(cancellationToken);
+
+        var objectives = await _repository.GetAllActiveObjectivesAsync(cancellationToken);
+        var masteries = (await _repository.GetAllSkillMasteriesAsync(userId, cancellationToken)) ?? Array.Empty<LearnerSkillMastery>();
+        var masteryMap = masteries.ToDictionary(m => m.ObjectiveCode, StringComparer.OrdinalIgnoreCase);
+
+        return objectives
+            .OrderBy(o => o.SortOrder)
+            .Select(o =>
+            {
+                masteryMap.TryGetValue(o.Code, out var m);
+                return new LearningObjectiveDto(
+                    Id: o.Id,
+                    Code: o.Code,
+                    Title: o.Title,
+                    Description: o.Description,
+                    SkillCategory: o.SkillCategory.ToString(),
+                    Difficulty: o.Difficulty.ToString(),
+                    CefrLevel: o.CefrLevel.ToString(),
+                    SuggestedDurationMinutes: o.SuggestedDurationMinutes,
+                    SortOrder: o.SortOrder,
+                    IsMastered: m?.IsMastered ?? false,
+                    MasteryScore: m?.MasteryScore
+                );
+            })
+            .ToList();
+    }
+
     public async Task<DailyStudyPlanDto> GetOrCreateTodayPlanAsync(
         string? explicitDate = null,
         bool forceRegenerate = false,
+        string? targetObjectiveCode = null,
         CancellationToken cancellationToken = default)
     {
         var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException("User is not authenticated.");
@@ -221,50 +253,42 @@ public class AdaptiveLearningService : IAdaptiveLearningService
 
         await EnsureCurriculumSeededAsync(cancellationToken);
 
-        // 1. Check Idempotency: Return existing plan if already generated for today
+        var allObjectives = await _repository.GetAllActiveObjectivesAsync(cancellationToken);
+        var latestAssessment = await _repository.GetLatestAssessmentAsync(userId, cancellationToken);
+        var learnerCategory = latestAssessment?.Category ?? LearnerCategory.Standard;
+
+        // 1. Check Idempotency: Return existing plan if already generated for today AND matches target objective if specified
         var existingPlan = await _repository.GetStudyPlanByDateAsync(userId, dateString, cancellationToken);
-        if (existingPlan != null && !forceRegenerate)
+        bool requiresNewObjective = !string.IsNullOrWhiteSpace(targetObjectiveCode) &&
+            existingPlan != null &&
+            !string.Equals(existingPlan.ObjectiveCode, targetObjectiveCode, StringComparison.OrdinalIgnoreCase);
+
+        if (existingPlan != null && !forceRegenerate && !requiresNewObjective)
         {
             return MapToDailyPlanDto(existingPlan, isIdempotentCached: true);
         }
 
-        // 2. Determine Learner Level & History
-        var latestAssessment = await _repository.GetLatestAssessmentAsync(userId, cancellationToken);
-        var learnerCategory = latestAssessment?.Category ?? LearnerCategory.Standard;
-
-        // 3. Anti-Repetition & Prerequisite Objective Selection
-        var allObjectives = await _repository.GetAllActiveObjectivesAsync(cancellationToken);
-        var recentPlans = (await _repository.GetStudyPlanHistoryAsync(userId, 20, cancellationToken)) ?? Array.Empty<StudyPlan>();
-        var recentCodes = recentPlans.Take(3).Select(p => p.ObjectiveCode).ToHashSet();
-        var allMasteries = (await _repository.GetAllSkillMasteriesAsync(userId, cancellationToken)) ?? Array.Empty<LearnerSkillMastery>();
-        var masteredCodes = allMasteries.Where(m => m.IsMastered).Select(m => m.ObjectiveCode).ToHashSet();
-
-        // Candidates matching the learner's difficulty
-        var categoryObjectives = allObjectives.Where(o => o.Difficulty == learnerCategory).ToList();
-        if (categoryObjectives.Count == 0)
-        {
-            categoryObjectives = allObjectives.ToList();
-        }
-
-        // Anti-repetition: filter out objectives assigned in the last 3 days
-        var unassignedRecent = categoryObjectives.Where(o => !recentCodes.Contains(o.Code)).ToList();
-
-        // Filter out already mastered objectives if unmastered ones exist
-        var unmastered = unassignedRecent.Where(o => !masteredCodes.Contains(o.Code)).ToList();
-
+        // 2. Select target objective (explicit request or adaptive selection)
         LearningObjective selectedObjective;
-        if (unmastered.Count > 0)
+        if (!string.IsNullOrWhiteSpace(targetObjectiveCode))
         {
-            selectedObjective = unmastered.First();
-        }
-        else if (unassignedRecent.Count > 0)
-        {
-            selectedObjective = unassignedRecent.First();
+            var requested = allObjectives.FirstOrDefault(o => o.Code.Equals(targetObjectiveCode, StringComparison.OrdinalIgnoreCase));
+            if (requested != null)
+            {
+                selectedObjective = requested;
+            }
+            else
+            {
+                selectedObjective = SelectNextObjective(allObjectives, learnerCategory,
+                    await _repository.GetStudyPlanHistoryAsync(userId, 20, cancellationToken),
+                    await _repository.GetAllSkillMasteriesAsync(userId, cancellationToken));
+            }
         }
         else
         {
-            // Fallback for full cycle: Pick the least recently practiced objective
-            selectedObjective = categoryObjectives.First();
+            selectedObjective = SelectNextObjective(allObjectives, learnerCategory,
+                await _repository.GetStudyPlanHistoryAsync(userId, 20, cancellationToken),
+                await _repository.GetAllSkillMasteriesAsync(userId, cancellationToken));
         }
 
         int targetMinutes = learnerCategory switch
@@ -273,6 +297,31 @@ public class AdaptiveLearningService : IAdaptiveLearningService
             LearnerCategory.Advanced => 30,
             _ => 20
         };
+
+        if (existingPlan != null)
+        {
+            // Update existing plan with selected objective & regenerate phases
+            existingPlan.ObjectiveId = selectedObjective.Id;
+            existingPlan.ObjectiveCode = selectedObjective.Code;
+            existingPlan.TargetMinutes = targetMinutes;
+            existingPlan.ActualMinutes = 0;
+            existingPlan.Status = StudyPlanStatus.InProgress;
+            existingPlan.OverallScore = null;
+            existingPlan.CompletedAt = null;
+
+            existingPlan.Phases.Clear();
+            var regeneratedPhases = LessonPhaseContentGenerator.GeneratePhasesForObjective(existingPlan, selectedObjective, learnerCategory);
+            foreach (var phase in regeneratedPhases)
+            {
+                existingPlan.Phases.Add(phase);
+            }
+
+            _repository.UpdateStudyPlan(existingPlan);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var updatedPlan = await _repository.GetStudyPlanWithPhasesAsync(existingPlan.Id, cancellationToken);
+            return MapToDailyPlanDto(updatedPlan ?? existingPlan, isIdempotentCached: false);
+        }
 
         var plan = new StudyPlan
         {
@@ -296,6 +345,29 @@ public class AdaptiveLearningService : IAdaptiveLearningService
         // Fetch reloaded plan with references
         var savedPlan = await _repository.GetStudyPlanWithPhasesAsync(plan.Id, cancellationToken);
         return MapToDailyPlanDto(savedPlan ?? plan, isIdempotentCached: false);
+    }
+
+    private static LearningObjective SelectNextObjective(
+        IReadOnlyList<LearningObjective> allObjectives,
+        LearnerCategory learnerCategory,
+        IReadOnlyList<StudyPlan>? recentPlans,
+        IReadOnlyList<LearnerSkillMastery>? allMasteries)
+    {
+        var recentCodes = (recentPlans ?? Array.Empty<StudyPlan>()).Take(3).Select(p => p.ObjectiveCode).ToHashSet();
+        var masteredCodes = (allMasteries ?? Array.Empty<LearnerSkillMastery>()).Where(m => m.IsMastered).Select(m => m.ObjectiveCode).ToHashSet();
+
+        var categoryObjectives = allObjectives.Where(o => o.Difficulty == learnerCategory).ToList();
+        if (categoryObjectives.Count == 0)
+        {
+            categoryObjectives = allObjectives.ToList();
+        }
+
+        var unassignedRecent = categoryObjectives.Where(o => !recentCodes.Contains(o.Code)).ToList();
+        var unmastered = unassignedRecent.Where(o => !masteredCodes.Contains(o.Code)).ToList();
+
+        if (unmastered.Count > 0) return unmastered.First();
+        if (unassignedRecent.Count > 0) return unassignedRecent.First();
+        return categoryObjectives.First();
     }
 
     public async Task<PhaseCompletionResultDto> UpdatePhaseProgressAsync(Guid phaseId, UpdatePhaseProgressRequest request, CancellationToken cancellationToken = default)

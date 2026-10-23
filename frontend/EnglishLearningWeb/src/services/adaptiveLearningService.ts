@@ -6,6 +6,7 @@ import {
   DailyStudyPlan,
   PhaseCompletionResult,
   LearningPlanHistory,
+  LearningObjectiveItem,
   ApiResult,
 } from "@/types";
 
@@ -61,12 +62,30 @@ export const adaptiveLearningService = {
   },
 
   /**
-   * Retrieve or idempotently create today's 4-phase daily study plan.
+   * Retrieve all available curriculum objectives / English tenses.
    */
-  async getTodayPlan(forceRegenerate = false): Promise<DailyStudyPlan> {
-    const query = forceRegenerate ? "?forceRegenerate=true" : "";
+  async getAllObjectives(): Promise<LearningObjectiveItem[]> {
+    const res = await apiRequest<ApiResult<LearningObjectiveItem[]>>(
+      "/adaptivelearning/objectives",
+      {
+        method: "GET",
+      }
+    );
+    return res.data || [];
+  },
+
+  /**
+   * Retrieve or idempotently create today's 4-phase daily study plan.
+   * Can optionally force regeneration or request a specific tense/objective.
+   */
+  async getTodayPlan(forceRegenerate = false, objectiveCode?: string): Promise<DailyStudyPlan> {
+    const params = new URLSearchParams();
+    if (forceRegenerate) params.set("forceRegenerate", "true");
+    if (objectiveCode) params.set("objective", objectiveCode);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+
     const res = await apiRequest<ApiResult<DailyStudyPlan>>(
-      `/adaptivelearning/plan/today${query}`,
+      `/adaptivelearning/plan/today${queryString}`,
       {
         method: "GET",
       }

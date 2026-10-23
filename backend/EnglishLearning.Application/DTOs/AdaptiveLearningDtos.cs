@@ -126,6 +126,20 @@ public record LearnerSkillMasteryItemDto(
     DateTime? NextRevisionDueDate
 );
 
+public record LearningObjectiveDto(
+    Guid Id,
+    string Code,
+    string Title,
+    string Description,
+    string SkillCategory,
+    string Difficulty,
+    string CefrLevel,
+    int SuggestedDurationMinutes,
+    int SortOrder,
+    bool IsMastered = false,
+    decimal? MasteryScore = null
+);
+
 // Option 3: Bilingual Translation DTOs
 public record TranslateRequest(
     string Text,

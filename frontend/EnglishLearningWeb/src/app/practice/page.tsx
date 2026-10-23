@@ -8,6 +8,7 @@ import { ConversationFeed } from "@/components/practice/ConversationFeed";
 import { TextConversationInput, ConversationState } from "@/components/practice/TextConversationInput";
 import { InteractiveMicControl, SpeechPracticeState } from "@/components/practice/InteractiveMicControl";
 import { conversationService, ConversationSessionDto } from "@/services/conversationService";
+import { liveConversationSocket } from "@/services/liveConversationSocket";
 import { useAuth } from "@/context/AuthContext";
 import { ConversationMessage } from "@/types";
 import { Modal } from "@/components/ui/Modal";
@@ -34,6 +35,19 @@ function PracticeContent() {
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
 
   const feedBottomRef = useRef<HTMLDivElement>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handleBargeIn = useCallback(() => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    liveConversationSocket.interruptAi();
+    setSpeechState("idle");
+  }, []);
 
   const scrollToBottom = () => {
     feedBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -137,6 +151,21 @@ function PracticeContent() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  useEffect(() => {
+    if (!session?.id) return;
+
+    liveConversationSocket.connect(session.id, {
+      onAiThinking: () => setSpeechState("processing"),
+      onAudioProcessing: () => setSpeechState("processing"),
+      onInterruptionAcknowledged: () => handleBargeIn(),
+      onError: (err) => console.warn("Live socket notice:", err),
+    });
+
+    return () => {
+      liveConversationSocket.disconnect();
+    };
+  }, [session?.id, handleBargeIn]);
 
   const handleSendMessage = async (text: string) => {
     if (!session?.id) {
@@ -250,6 +279,7 @@ function PracticeContent() {
           minute: "2-digit",
         }),
         audioDurationSec: 4,
+        pronunciation: speechResp.pronunciation,
       };
 
       const aiMsg: ConversationMessage = {
@@ -276,13 +306,17 @@ function PracticeContent() {
         setSpeechState("ai_responding");
         const audioUrl = `data:audio/mpeg;base64,${speechResp.audioBase64}`;
         const audio = new Audio(audioUrl);
+        activeAudioRef.current = audio;
         audio.onended = () => {
+          activeAudioRef.current = null;
           setSpeechState("idle");
         };
         audio.onerror = () => {
+          activeAudioRef.current = null;
           speakEmmaResponse(aiMsg.content, () => setSpeechState("idle"));
         };
         audio.play().catch(() => {
+          activeAudioRef.current = null;
           speakEmmaResponse(aiMsg.content, () => setSpeechState("idle"));
         });
       } else {
@@ -477,6 +511,7 @@ function PracticeContent() {
             onSendSpeechBlob={handleSendSpeechBlob}
             onSwitchToKeyboard={() => setInputMode("text")}
             onRetry={loadSession}
+            onBargeIn={handleBargeIn}
             errorMessage={errorMessage}
             onClearError={() => setErrorMessage(null)}
             disabled={isInputDisabled}

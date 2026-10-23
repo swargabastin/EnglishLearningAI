@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using EnglishLearning.Api.Hubs;
 using EnglishLearning.Api.Middlewares;
 using EnglishLearning.Application.Interfaces.Services;
 using EnglishLearning.Application.Services;
@@ -14,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add controllers and API explorer
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 
 // Configure Swagger with JWT Bearer support
@@ -64,6 +66,7 @@ builder.Services.AddScoped<IAssessmentService, AssessmentService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
 builder.Services.AddScoped<IVocabularyService, VocabularyService>();
 builder.Services.AddScoped<IAdaptiveLearningService, AdaptiveLearningService>();
+builder.Services.AddScoped<IPronunciationAssessmentService, PronunciationAssessmentService>();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
 // Configure JWT Authentication
@@ -101,6 +104,19 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -173,6 +189,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ConversationHub>("/hubs/conversation");
 
 app.Run();
 

@@ -8,7 +8,8 @@ public interface IAdaptiveLearningService
     Task<LearnerAssessmentResultDto> SubmitAssessmentAsync(SubmitAssessmentRequest request, CancellationToken cancellationToken = default);
     Task<LearnerAssessmentResultDto?> GetLatestAssessmentAsync(CancellationToken cancellationToken = default);
 
-    Task<DailyStudyPlanDto> GetOrCreateTodayPlanAsync(string? explicitDate = null, bool forceRegenerate = false, CancellationToken cancellationToken = default);
+    Task<DailyStudyPlanDto> GetOrCreateTodayPlanAsync(string? explicitDate = null, bool forceRegenerate = false, string? targetObjectiveCode = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LearningObjectiveDto>> GetAllObjectivesAsync(CancellationToken cancellationToken = default);
     Task<PhaseCompletionResultDto> UpdatePhaseProgressAsync(Guid phaseId, UpdatePhaseProgressRequest request, CancellationToken cancellationToken = default);
     Task<PhaseCompletionResultDto> CompletePhaseAsync(Guid phaseId, CompletePhaseRequest request, CancellationToken cancellationToken = default);
 

@@ -126,13 +126,21 @@ public class AuthService : IAuthService
             throw new EntityNotFoundException(nameof(User), _currentUserService.UserId.Value);
         }
 
+        var avatarsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "avatars");
+        string? avatarUrl = null;
+        if (Directory.Exists(avatarsDir) && Directory.GetFiles(avatarsDir, $"{user.Id}.*").Length > 0)
+        {
+            avatarUrl = $"/api/v1/auth/avatar/{user.Id}";
+        }
+
         return new UserProfileDto(
             user.Id,
             user.Name,
             user.Email,
             user.EnglishLevel.ToString(),
             user.LearningGoal.ToString(),
-            user.CreatedAt
+            user.CreatedAt,
+            avatarUrl
         );
     }
 }

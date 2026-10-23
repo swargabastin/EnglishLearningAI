@@ -4,11 +4,20 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 export type RecorderState = "idle" | "requesting_permission" | "recording" | "processing" | "error";
 
+export interface AudioRecorderOptions {
+  onAutoSubmitTurn?: (blob: Blob, transcript: string) => Promise<void> | void;
+  isAiSpeaking?: boolean;
+  onBargeIn?: () => void;
+  autoSilenceTimeoutMs?: number;
+}
+
 export interface AudioRecorderHook {
   state: RecorderState;
   errorMessage: string | null;
   recordingDurationSec: number;
   liveTranscript: string;
+  isHandsFree: boolean;
+  setIsHandsFree: (enabled: boolean) => void;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<{ blob: Blob | null; transcript: string }>;
   cancelRecording: () => void;
@@ -28,12 +37,13 @@ interface BrowserSpeechRecognition {
   abort: () => void;
 }
 
-export function useAudioRecorder(): AudioRecorderHook {
+export function useAudioRecorder(options?: AudioRecorderOptions): AudioRecorderHook {
   const [state, setState] = useState<RecorderState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recordingDurationSec, setRecordingDurationSec] = useState<number>(0);
   const [isSupported, setIsSupported] = useState<boolean>(true);
   const [liveTranscript, setLiveTranscript] = useState<string>("");
+  const [isHandsFree, setIsHandsFree] = useState<boolean>(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -42,6 +52,18 @@ export function useAudioRecorder(): AudioRecorderHook {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const transcriptAccumulatorRef = useRef<string>("");
   const isRecordingRef = useRef<boolean>(false);
+  const isHandsFreeRef = useRef<boolean>(false);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const optionsRef = useRef<AudioRecorderOptions | undefined>(options);
+  const stopRecordingRef = useRef<() => Promise<{ blob: Blob | null; transcript: string }>>();
+
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
+  useEffect(() => {
+    isHandsFreeRef.current = isHandsFree;
+  }, [isHandsFree]);
 
   // Check browser MediaRecorder support
   useEffect(() => {
@@ -56,6 +78,10 @@ export function useAudioRecorder(): AudioRecorderHook {
 
   const cleanupStream = useCallback(() => {
     isRecordingRef.current = false;
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -189,6 +215,24 @@ export function useAudioRecorder(): AudioRecorderHook {
               if (full) {
                 transcriptAccumulatorRef.current = full;
                 setLiveTranscript(full);
+
+                if (optionsRef.current?.isAiSpeaking) {
+                  optionsRef.current.onBargeIn?.();
+                }
+
+                if (isHandsFreeRef.current) {
+                  if (silenceTimerRef.current) {
+                    clearTimeout(silenceTimerRef.current);
+                  }
+                  silenceTimerRef.current = setTimeout(async () => {
+                    if (isRecordingRef.current && transcriptAccumulatorRef.current.trim().length > 0) {
+                      const res = await stopRecordingRef.current?.();
+                      if (res?.blob) {
+                        await optionsRef.current?.onAutoSubmitTurn?.(res.blob, res.transcript);
+                      }
+                    }
+                  }, optionsRef.current?.autoSilenceTimeoutMs || 1400);
+                }
               }
             };
 
@@ -287,6 +331,8 @@ export function useAudioRecorder(): AudioRecorderHook {
     });
   }, [cleanupStream]);
 
+  stopRecordingRef.current = stopRecording;
+
   const cancelRecording = useCallback(() => {
     isRecordingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -310,6 +356,8 @@ export function useAudioRecorder(): AudioRecorderHook {
     errorMessage,
     recordingDurationSec,
     liveTranscript,
+    isHandsFree,
+    setIsHandsFree,
     startRecording,
     stopRecording,
     cancelRecording,

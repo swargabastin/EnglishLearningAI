@@ -12,6 +12,7 @@ public class SpeechConversationService : ISpeechConversationService
     private readonly ISpeechToTextService _sttService;
     private readonly ITextToSpeechService _ttsService;
     private readonly IConversationService _conversationService;
+    private readonly IPronunciationAssessmentService _pronunciationService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<SpeechConversationService> _logger;
 
@@ -48,13 +49,15 @@ public class SpeechConversationService : ISpeechConversationService
         ITextToSpeechService ttsService,
         IConversationService conversationService,
         IConfiguration configuration,
-        ILogger<SpeechConversationService> logger)
+        ILogger<SpeechConversationService> logger,
+        IPronunciationAssessmentService? pronunciationService = null)
     {
         _sttService = sttService;
         _ttsService = ttsService;
         _conversationService = conversationService;
         _configuration = configuration;
         _logger = logger;
+        _pronunciationService = pronunciationService ?? new PronunciationAssessmentService();
     }
 
     public async Task<SpeechConversationResponseDto> ProcessSpeechAsync(
@@ -125,6 +128,8 @@ public class SpeechConversationService : ISpeechConversationService
             _logger.LogWarning(ex, "Text-to-speech synthesis failed for session '{SessionId}'. Returning text-only conversation response.", sessionId);
         }
 
+        var pronunciation = _pronunciationService.EvaluatePronunciation(recognizedText);
+
         return new SpeechConversationResponseDto(
             sendResult.Session,
             sendResult.UserMessage,
@@ -132,7 +137,8 @@ public class SpeechConversationService : ISpeechConversationService
             recognizedText,
             audioBase64,
             "audio/mpeg",
-            sendResult.PedagogicalTip
+            sendResult.PedagogicalTip,
+            pronunciation
         );
     }
 
