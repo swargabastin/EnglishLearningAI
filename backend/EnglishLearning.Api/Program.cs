@@ -161,8 +161,26 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Configure CORS
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                     ?? new[] { "http://localhost:3000" };
+var originsList = new List<string>();
+var configuredArray = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (configuredArray != null && configuredArray.Length > 0)
+{
+    originsList.AddRange(configuredArray);
+}
+
+var rawOriginsString = builder.Configuration["Cors:AllowedOrigins"] ?? builder.Configuration["CORS_ALLOWED_ORIGINS"];
+if (!string.IsNullOrWhiteSpace(rawOriginsString))
+{
+    var split = rawOriginsString.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    originsList.AddRange(split);
+}
+
+if (originsList.Count == 0)
+{
+    originsList.Add("http://localhost:3000");
+}
+
+var allowedOrigins = originsList.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
 builder.Services.AddCors(options =>
 {
