@@ -65,7 +65,7 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 
             var currentEnv = _configuration["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
             _logger.LogError("OpenAI API key is missing and no client speech transcript was provided in {Environment} mode.", currentEnv);
-            throw new AiServiceException("Speech recognition is currently unavailable. Please speak into your microphone or configure OPENAI_API_KEY.");
+            throw new InvalidAudioException("We couldn't clearly catch your words. Please speak clearly into your microphone, or use keyboard mode to type your message.");
         }
 
         var fileExtension = ResolveFileExtension(contentType);
@@ -152,10 +152,10 @@ public class WhisperSpeechToTextService : ISpeechToTextService
     private bool IsTestingEnvironment()
     {
         var env = _configuration["ASPNETCORE_ENVIRONMENT"] 
+                  ?? _configuration["Environment"]
                   ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
                   
-        return string.Equals(env, "Testing", StringComparison.OrdinalIgnoreCase) 
-               || string.Equals(_configuration["AiSettings:EnableTestFallback"], "true", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(env, "Testing", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveFileExtension(string contentType)

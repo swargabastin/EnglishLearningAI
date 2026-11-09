@@ -184,7 +184,10 @@ export function useAudioRecorder(options?: AudioRecorderOptions): AudioRecorderH
             const recognition = new SpeechRecognitionClass();
             recognition.continuous = true;
             recognition.interimResults = true;
-            recognition.lang = "en-US";
+            const preferredLang = (typeof navigator !== "undefined" && navigator.language && navigator.language.startsWith("en")) 
+              ? navigator.language 
+              : "en-US";
+            recognition.lang = preferredLang;
 
             recognition.onresult = (event: Event) => {
               const recEvent = event as unknown as {
@@ -293,7 +296,6 @@ export function useAudioRecorder(options?: AudioRecorderOptions): AudioRecorderH
 
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.onend = null;
           recognitionRef.current.stop();
         } catch {
           // Ignored
@@ -312,13 +314,23 @@ export function useAudioRecorder(options?: AudioRecorderOptions): AudioRecorderH
       recorder.onstop = () => {
         const mimeType = recorder.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const finalTranscript = transcriptAccumulatorRef.current || capturedTranscript;
-        cleanupStream();
-        setState("idle");
-        resolve({
-          blob: blob.size > 0 ? blob : null,
-          transcript: finalTranscript,
-        });
+
+        const finishTurn = () => {
+          const finalTranscript = (transcriptAccumulatorRef.current || capturedTranscript || "").trim();
+          cleanupStream();
+          setState("idle");
+          resolve({
+            blob: blob.size > 0 ? blob : null,
+            transcript: finalTranscript,
+          });
+        };
+
+        if (transcriptAccumulatorRef.current && transcriptAccumulatorRef.current.trim().length > 0) {
+          finishTurn();
+        } else {
+          // Give speech recognition a brief window to flush any in-flight transcribed words
+          setTimeout(finishTurn, 450);
+        }
       };
 
       try {

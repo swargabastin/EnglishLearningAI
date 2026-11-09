@@ -316,20 +316,81 @@ public class OpenAiConversationService : IAiConversationService
             }
         }
 
-        // 5. Very Short Answers (under 4 words)
-        if (words.Length <= 3)
+        // 5. Daily Conversation & Common Topics
+        if (lower.Contains("learn") || lower.Contains("english") || lower.Contains("speak") || lower.Contains("practice") || lower.Contains("fluent"))
         {
-            tip ??= "Fluency tip: Try speaking in complete sentences with more detail (e.g. \"Yes, I have worked with...\" instead of a brief answer).";
+            tip ??= "Fluency tip: Practicing out loud daily, even for 10 minutes, builds muscle memory and vocal confidence faster than reading alone.";
             return new AiConversationResponse(
-                $"I understand! To help build your speaking confidence, could you elaborate a bit more on that? For instance, what was the most interesting part of that experience?",
+                "You are doing wonderfully by practicing out loud today! Building consistency is the most important part of spoken fluency. What is your main personal or career goal for speaking fluent English?",
                 tip
             );
         }
 
-        // 6. Natural General Dialogue Continuation
-        tip ??= "Vocabulary upgrade: Try using discourse markers like \"In my experience,\" or \"On the other hand,\" to transition smoothly between ideas.";
+        if (lower.Contains("lunch") || lower.Contains("dinner") || lower.Contains("breakfast") || lower.Contains("food") || lower.Contains("cook") || lower.Contains("eat") || lower.Contains("coffee") || lower.Contains("tea"))
+        {
+            tip ??= "Vocabulary tip: Use descriptive words for food like 'delicious', 'refreshing', 'flavorful', or 'nutritious' instead of just 'good'.";
+            return new AiConversationResponse(
+                "That sounds delightful! Good food always makes the day better. Do you enjoy cooking meals yourself at home, or do you prefer dining out or ordering in?",
+                tip
+            );
+        }
+
+        if (lower.Contains("weekend") || lower.Contains("saturday") || lower.Contains("sunday") || lower.Contains("holiday") || lower.Contains("vacation") || lower.Contains("trip"))
+        {
+            tip ??= "Time prepositions reminder: We say 'on the weekend' or 'at the weekend', and 'on Saturday' for specific days.";
+            return new AiConversationResponse(
+                "Weekends and holidays are always something to look forward to! How do you usually like to spend your free time when you're relaxing?",
+                tip
+            );
+        }
+
+        if (lower.Contains("family") || lower.Contains("friend") || lower.Contains("parents") || lower.Contains("brother") || lower.Contains("sister") || lower.Contains("children") || lower.Contains("home"))
+        {
+            return new AiConversationResponse(
+                "Spending quality time with family and close friends is so rewarding. What is your favorite activity or conversation topic when you all get together?",
+                tip
+            );
+        }
+
+        if (lower.Contains("fine") || lower.Contains("good") || lower.Contains("well") || lower.Contains("great") || lower.Contains("okay") || lower.Contains("busy"))
+        {
+            return new AiConversationResponse(
+                "I'm glad to hear that! How has your week been shaping up so far? Is there anything exciting you've been working on or looking forward to?",
+                tip
+            );
+        }
+
+        if (lower.Contains("weather") || lower.Contains("rain") || lower.Contains("sunny") || lower.Contains("hot") || lower.Contains("cold"))
+        {
+            return new AiConversationResponse(
+                "The weather definitely affects the mood of the day! What kind of season or weather do you personally enjoy the most?",
+                tip
+            );
+        }
+
+        if (lower.Contains("travel") || lower.Contains("flight") || lower.Contains("hotel") || lower.Contains("visit") || lower.Contains("place") || lower.Contains("city") || lower.Contains("country"))
+        {
+            tip ??= "Travel vocabulary: Try words like 'breathtaking', 'sightseeing', 'scenic', and 'itinerary'.";
+            return new AiConversationResponse(
+                "Traveling is such an enriching way to experience new cultures and practice speaking! What is one place in the world you would love to explore next, and why?",
+                tip
+            );
+        }
+
+        // 6. Very Short Answers (under 4 words)
+        if (words.Length <= 3)
+        {
+            tip ??= "Fluency tip: Try extending your response into a complete sentence with a supporting reason (e.g. \"Yes, because...\").";
+            return new AiConversationResponse(
+                "I see! To help build your speaking confidence, could you tell me a little more about that in a full sentence?",
+                tip
+            );
+        }
+
+        // 7. Natural General Dialogue Continuation
+        tip ??= "Discourse marker tip: Use transition words like 'In my opinion,', 'Actually,', or 'To be honest,' to make your spoken English sound smooth and natural.";
         return new AiConversationResponse(
-            "That's a clear explanation! You articulated your point well. What aspect of that did you find most rewarding, or is there another example you'd like to share?",
+            "That's a thoughtful point, and you expressed it clearly! Could you share a quick example or tell me how that usually works for you?",
             tip
         );
     }
